@@ -1,53 +1,31 @@
-# src/llm/ollama.py —— Ollama 本地模型 provider
-#
-# 通过 OpenAI 兼容协议（/v1/chat/completions）调用本机 ollama 服务。
-# Ollama 的 API 设计和 OpenAI 完全一致，所以直接用 AsyncOpenAI SDK。
-# 只需要改 base_url 指向本地端口，api_key 填占位符（ollama 不校验）。
-#
-# 前端类比：这就像 axios baseURL 从 https://api.openai.com 改成 http://localhost:11434/v1，
-# 其他请求体/响应结构完全不变。
-
 import os
-from collections.abc import AsyncGenerator
 from typing import override
+from collections.abc import AsyncGenerator
 
-from openai import AsyncOpenAI
-from openai._streaming import AsyncStream
-from openai.types.chat import ChatCompletionMessageParam
-from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai import AsyncOpenAI, AsyncStream
+from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
-from src.llm.provider import LLMProvider
+from .provider import LLMProvider
 
-
-class OllamaProvider(LLMProvider):
-    """Ollama 本地模型 provider
-
-    通过 OpenAI 兼容协议调用本地 ollama 服务。
-    支持所有 ollama pull 下来的模型（qwen2.5:7b / deepseek-r1:32b 等）。
-
-    主要配置项（通过环境变量或构造参数传入）：
-    - OLLAMA_MODEL：要用的模型名，默认 qwen2.5:7b
-    - OLLAMA_BASE_URL：ollama 服务的地址，默认 http://127.0.0.1:11434/v1
-    """
-
-    def __init__(self, model: str | None = None, base_url: str | None = None):
-        """初始化 Ollama provider
+class DeepseekProvicer(LLMProvider):
+    def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
+        """初始化 Deepseek provider
 
         Args:
-            model: ollama 模型名，如 "qwen2.5:7b"、"deepseek-r1:32b"
-                  不传则读 OLLAMA_MODEL 环境变量，再没有就默认 qwen2.5:7b
-            base_url: ollama 服务的完整 URL（带 /v1 后缀）
-                     不传则读 OLLAMA_BASE_URL 环境变量，再没有默认 http://127.0.0.1:11434/v1
+            model: deepseek 模型名，如 "deepseek-v4-flash"、"deepseek-v4-pro"
+                  不传则读 DEEPSEEK_MODEL 环境变量，再没有就默认 deepseek-v4-flash
+            base_url: deepseek 服务的完整 URL（带 /v1 后缀）
+                     不传则读 DEEPSEEK_BASE_URL 环境变量，再没有默认 https://api.deepseek.com
         """
-        self._model: str = model or os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+        self._model: str = model or os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
         base_url = base_url or os.getenv(
-            "OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1"
+            "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
         )
 
         # ⚠️ 新版 openai SDK 强制要求 api_key 或 OPENAI_API_KEY 环境变量。
-        # ollama 不校验 key 内容，设个占位让 SDK 不报错。
+        # deepseek 不校验 key 内容，设个占位让 SDK 不报错。
         # 用 setdefault：后续如果设了真实云端的 key，不会被覆盖。
-        _ = os.environ.setdefault("OPENAI_API_KEY", "ollama")
+        _ = os.environ.setdefault("OPENAI_API_KEY", "need-deepseek-api-key")
 
         self._client: AsyncOpenAI = AsyncOpenAI(base_url=base_url)
 

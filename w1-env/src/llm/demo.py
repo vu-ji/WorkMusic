@@ -16,7 +16,7 @@
 import asyncio
 import time
 
-from .router import RouterClient
+from src.llm.router import RouterClient
 
 
 async def main() -> None:
@@ -31,8 +31,10 @@ async def main() -> None:
     total_chars: int = 0  # 统计输出总字数
 
     # 发起流式请求，逐 token 处理
-    async for token in client.chat_stream([
-        {"role": "user", "content": "你好，用中文回答"},
+    async for token in client.chat_stream(messages=[
+        {"role": "user", "content": "我叫 vuji"},
+        {"role": "assistant", "content": "你好, vuji"},
+        {"role": "user", "content": "我叫什么"}
     ]):
         # 第一个 token 到达时，记录 TTFT（Time To First Token）
         if first_token is None:

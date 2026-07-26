@@ -18,8 +18,8 @@ from collections.abc import AsyncGenerator
 
 from openai.types.chat import ChatCompletionMessageParam
 
-from .ollama import OllamaProvider
-from .provider import LLMProvider
+from src.llm.ollama import OllamaProvider
+from src.llm.provider import LLMProvider
 
 
 class RouterClient:
@@ -45,16 +45,18 @@ class RouterClient:
         - "heavy" → deepseek-r1:32b（深度推理，适合复杂规划和合同审查）
 
         Args:
-            tier: 模型等级，可选 "light" / "heavy"
+            tier: 模型等级，可选 "light" / "heavy" / "deepseek"
                   不传则读 ROUTER_DEFAULT_TIER 环境变量
                   再没有默认 "light"
         """
         tier = tier or os.getenv("ROUTER_DEFAULT_TIER", "light")
-
+        print(f"tier: {tier}")
         if tier == "light":
             self._provider = OllamaProvider("qwen2.5:7b")
         elif tier == "heavy":
             self._provider = OllamaProvider("deepseek-r1:32b")
+        elif tier == "deepseek":
+            self._provider = OllamaProvider("deepseek-v4-flash")
         else:
             raise ValueError(f"未知 tier: {tier}，可选值: light, heavy")
 

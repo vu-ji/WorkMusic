@@ -17,7 +17,7 @@ from collections.abc import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from ..llm.router import RouterClient  # noqa: E402 — 忽略 import 顺序检查
+from src.llm.router import RouterClient  # noqa: E402 — 忽略 import 顺序检查
 
 # 创建 FastAPI 应用实例
 # FastAPI 自动生成 OpenAPI 文档，访问 http://localhost:8000/docs 可交互测试

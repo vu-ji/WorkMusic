@@ -20,8 +20,6 @@ systemPrompt= load_prompt(
     max_candidates=10,
 )
 
-print(systemPrompt)
-
 test_query = "给连锁健身房找 10 首背景音乐，BPM 120 以上，副歌具有爆发力，预算每年 5 万"
 
 message = [

@@ -8,4 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+.venv3
+
+# Agent-related files
 .env
+
+# IDE-related files
+.DS_Store
+
+# 
+node_modules

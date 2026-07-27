@@ -47,7 +47,8 @@ class PromptRenderer:
 
         # input
         lines.append("## 输入")
-        lines.append(s["input"])
+        for inp in s["input"]:
+            lines.append(inp)
         lines.append("")
 
         # output
@@ -62,6 +63,17 @@ class PromptRenderer:
         lines.append("## 语气")
         lines.append(s["tone"])
         lines.append("")
-    
+
+        if "examples" in s:
+            lines.append("")
+            lines.append("## 示例（请严格参照以下格式和风格）")
+            for ex in s["examples"]:
+                lines.append("")
+                lines.append("【用户需求】")
+                lines.append(ex["input"])
+                lines.append("")
+                lines.append("【正确答案】")
+                lines.append(ex["output"])
+
         return "\n".join(lines)
         

@@ -12,13 +12,15 @@ from src.llm.router import RouterClient
 
 promptPath = Path(__file__).parent.parent / "prompts" / "catalog_radar" / "music-library-few-shot.md"
 
-systemPrompt = promptPath.read_text()
-# systemPrompt= load_prompt(
-#     Path("prompts/catalog_radar/prompt.yaml"),
-#     agent_name="小曲",
-#     agent_title="曲库雷达",
-#     max_candidates=10,
-# )
+# systemPrompt = promptPath.read_text()
+systemPrompt= load_prompt(
+    Path("prompts/catalog_radar/v1_fewshot.yaml"),
+    agent_name="小曲",
+    agent_title="曲库雷达",
+    max_candidates=10,
+)
+
+# print(systemPrompt)
 
 test_query = "给连锁健身房找 10 首背景音乐，BPM 120 以上，副歌具有爆发力，预算每年 5 万"
 

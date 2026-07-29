@@ -57,6 +57,8 @@ class PromptRenderer:
             lines.append(f"{i + 1}. {step['title']}：{step['content']}")
             if "rule" in step and step["rule"]:
                 lines.append(f"   （{step['rule']}）")
+        if 'format' in s['output']:
+            lines.append(s['output']['format'])
         lines.append("")
 
         # tone

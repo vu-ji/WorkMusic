@@ -33,9 +33,9 @@ async def run(prompt_name, system_prompt, tier: str = ''):
     print()
 
 async def main():
-    await run("v0", v0, tier='light')
-    await run("v0", v0, tier='middle')
-    await run("v0", v0, tier='heavy')
+    await run("v0", v1, tier='light')
+    await run("v1", v1, tier='middle')
+    # await run("v0", v0, tier='heavy')
     # await run("v1_fewshot", v1)
 
 asyncio.run(main())

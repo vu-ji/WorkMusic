@@ -18,9 +18,6 @@ run-model:
 run-light: 
 	cd ../w1-env && source .venv/bin/activate && cd ../w2-prompts && ROUTER_DEFAULT_TIER=light python src/test_prompt.py
 
-run-light: 
-	cd ../w1-env && source .venv/bin/activate && cd ../w2-prompts && ROUTER_DEFAULT_TIER=middle python src/test_prompt.py
-
 run-heavy: 
 	cd ../w1-env && source .venv/bin/activate && cd ../w2-prompts && ROUTER_DEFAULT_TIER=heavy python src/test_prompt.py
 

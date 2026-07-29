@@ -1,33 +1,49 @@
 import os
+from pathlib import Path
 from typing import override
 from collections.abc import AsyncGenerator
 
+from dotenv import load_dotenv
 from openai import AsyncOpenAI, AsyncStream
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
 from .provider import LLMProvider
 
-class DeepseekProvicer(LLMProvider):
-    def __init__(self, model: str | None = None, base_url: str | None = None) -> None:
+# 加载项目根目录的 .env（w1-env/.env），让 DEEPSEEK_API_KEY 等在任何运行目录下都生效
+_ = load_dotenv(Path(__file__).parent.parent.parent / ".env")
+
+
+class DeepseekProvider(LLMProvider):
+    def __init__(
+        self,
+        model: str | None = None,
+        base_url: str | None = None,
+        api_key: str | None = None,
+    ) -> None:
         """初始化 Deepseek provider
 
         Args:
             model: deepseek 模型名，如 "deepseek-v4-flash"、"deepseek-v4-pro"
                   不传则读 DEEPSEEK_MODEL 环境变量，再没有就默认 deepseek-v4-flash
-            base_url: deepseek 服务的完整 URL（带 /v1 后缀）
+            base_url: deepseek 服务的完整 URL（OpenAI 兼容，不用带 /v1 后缀）
                      不传则读 DEEPSEEK_BASE_URL 环境变量，再没有默认 https://api.deepseek.com
+            api_key: DeepSeek API Key；不传则读 DEEPSEEK_API_KEY 环境变量
         """
         self._model: str = model or os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
         base_url = base_url or os.getenv(
             "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
         )
 
-        # ⚠️ 新版 openai SDK 强制要求 api_key 或 OPENAI_API_KEY 环境变量。
-        # deepseek 不校验 key 内容，设个占位让 SDK 不报错。
-        # 用 setdefault：后续如果设了真实云端的 key，不会被覆盖。
-        _ = os.environ.setdefault("OPENAI_API_KEY", "need-deepseek-api-key")
+        # DeepSeek 云端强制校验真实 API Key（与本地 ollama 不同）。
+        # 优先用构造参数，其次 DEEPSEEK_API_KEY 环境变量；都没有就明确报错。
+        api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "缺少 DeepSeek API Key：请设置 DEEPSEEK_API_KEY 环境变量，或在构造 DeepseekProvider 时传入 api_key="
+            )
 
-        self._client: AsyncOpenAI = AsyncOpenAI(base_url=base_url)
+        # 把真实 key 传给 SDK（不再借用 OPENAI_API_KEY 占位）
+        self._client: AsyncOpenAI = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     @property
     @override
@@ -37,9 +53,9 @@ class DeepseekProvicer(LLMProvider):
 
     @override
     async def chat_stream(
-        self, messages: list[ChatCompletionMessageParam]
+        self, messages: list[ChatCompletionMessageParam], temperature: float = 0.8
     ) -> AsyncGenerator[str, None]:
-        """调用 ollama 流式接口，逐 token yield 响应文本
+        """调用 deepseek 流式接口，逐 token yield 响应文本
 
         流式请求流程（类比前端 fetch + ReadableStream）：
         1. create(stream=True) → 发起请求，拿到 AsyncStream（类似 Response.body）
@@ -59,6 +75,7 @@ class DeepseekProvicer(LLMProvider):
                 model=self._model,
                 messages=messages,
                 stream=True,  # 启用流式：逐 token 返回，不等人话说完
+                temperature=temperature
             )
         )
 

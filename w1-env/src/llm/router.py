@@ -15,12 +15,25 @@
 
 import os
 from collections.abc import AsyncGenerator
+from pathlib import Path
+import re
+import sys
 
 from openai.types.chat import ChatCompletionMessageParam
 
 from src.llm.ollama import OllamaProvider
+from src.llm.deepseek import DeepseekProvider
 from src.llm.provider import LLMProvider
 
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "w3-context" / "src"))  # router.py 位于 w1-env/src/llm，上溯 4 层到 WorkMusic 再进 w3-context/src
+from token_budget import TokenBudget
+
+ROUTER_CONFIG = {
+    "light":  ("qwen2.5:7b"),
+    "middle": ("deepseek-r1:8b"),   # 新增
+    "heavy":  ("deepseek-r1:32b"),
+    "cloud": ("deepseek-v4-flash"),
+}
 
 class RouterClient:
     """模型路由客户端
@@ -49,21 +62,35 @@ class RouterClient:
                   不传则读 ROUTER_DEFAULT_TIER 环境变量
                   再没有默认 "light"
         """
-        tier = tier or os.getenv("ROUTER_DEFAULT_TIER", "light")
+        tier: str = tier or os.getenv("ROUTER_DEFAULT_TIER", "light")
+        self.budget = TokenBudget(model_window=128000)
         print(f"tier: {tier}")
-        if tier == "light":
-            self._provider = OllamaProvider("qwen2.5:7b")
-        elif tier == "heavy":
-            self._provider = OllamaProvider("deepseek-r1:32b")
-        elif tier == "deepseek":
-            self._provider = OllamaProvider("deepseek-v4-flash")
+        if tier in ROUTER_CONFIG:
+            self._provider = OllamaProvider(ROUTER_CONFIG[tier])
         else:
-            raise ValueError(f"未知 tier: {tier}，可选值: light, heavy")
+            raise ValueError(f"未知 tier: {tier}，可选值: light, middle, heavy, deepseek")
 
     @property
     def model_name(self) -> str:
         """获取当前路由选中的模型名称，用于日志/观测面板展示"""
         return self._provider.model_name
+    
+    def get_safe_message(self, messages: list[ChatCompletionMessageParam]) -> list[ChatCompletionMessageParam]:
+        ok, _, _ = self.budget.is_within_budget(messages)
+        if not ok:
+            return self.budget.trim(messages, self.budget.budget)
+        return messages
+
+    async def chat_sync(self, messages: list[ChatCompletionMessageParam], temperature: float = 0.8):
+        safe = self.get_safe_message(messages)
+        before = self.budget.count(messages)
+        after = self.budget.count(safe)
+        print(f"[TokenBudget] input={before} | trimmed_to={after} | saved={before - after}")
+        reply, usage = await self._provider.chat_sync(self.get_safe_message(messages), temperature)
+        if usage.prompt_tokens == 0:
+            # Ollama 不返回 usage，用字符估算代替
+            usage = type(usage)(prompt_tokens=after, completion_tokens=len(reply or "") // 4, total_tokens=after + len(reply or "") // 4)
+        return reply, usage
 
     async def chat_stream(
         self, messages: list[ChatCompletionMessageParam]
@@ -79,6 +106,6 @@ class RouterClient:
         Yields:
             逐 token 文本，委托自底层 provider 的 chat_stream
         """
-        stream: AsyncGenerator[str, None] = self._provider.chat_stream(messages)
+        stream: AsyncGenerator[str, None] = self._provider.chat_stream(self.get_safe_message(messages))
         async for token in stream:
             yield token

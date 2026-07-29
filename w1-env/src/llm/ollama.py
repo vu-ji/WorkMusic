@@ -8,15 +8,20 @@
 # 其他请求体/响应结构完全不变。
 
 import os
+from pathlib import Path
 from collections.abc import AsyncGenerator
 from typing import override
 
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from openai._streaming import AsyncStream
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from src.llm.provider import LLMProvider
+
+# 加载项目根目录的 .env（w1-env/.env），让 OLLAMA_* 等配置在任何运行目录下都生效
+_ = load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 
 class OllamaProvider(LLMProvider):
@@ -44,6 +49,8 @@ class OllamaProvider(LLMProvider):
             "OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1"
         )
 
+        print("model:", self._model)
+
         # ⚠️ 新版 openai SDK 强制要求 api_key 或 OPENAI_API_KEY 环境变量。
         # ollama 不校验 key 内容，设个占位让 SDK 不报错。
         # 用 setdefault：后续如果设了真实云端的 key，不会被覆盖。
@@ -57,9 +64,19 @@ class OllamaProvider(LLMProvider):
         """返回当前加载的模型名称"""
         return self._model
 
+    async def chat_sync(self, messages: list[ChatCompletionMessageParam], temperature: float = 0.8):
+        """非流式调用，只为拿 usage"""
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=temperature,
+        )
+        print("[DEBUG] usage raw:", response.usage)
+        return response.choices[0].message.content, response.usage
+
     @override
     async def chat_stream(
-        self, messages: list[ChatCompletionMessageParam]
+        self, messages: list[ChatCompletionMessageParam], temperature: float = 0.8
     ) -> AsyncGenerator[str, None]:
         """调用 ollama 流式接口，逐 token yield 响应文本
 
@@ -81,6 +98,8 @@ class OllamaProvider(LLMProvider):
                 model=self._model,
                 messages=messages,
                 stream=True,  # 启用流式：逐 token 返回，不等人话说完
+                temperature=temperature,
+                response_format={ "type": "json_object" },
             )
         )
 

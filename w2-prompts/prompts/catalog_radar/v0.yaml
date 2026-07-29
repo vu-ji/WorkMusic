@@ -21,4 +21,6 @@ system:
         content: 把模糊需求拆成结构化约束
       - title: 候选列表
         content: 按匹配度降序，最多 {{max_candidates}} 条；每条含 歌曲名 / 命中理由 / 预估授权价
+    format: "你必须输出一个合法的 JSON 对象，格式为 {\"follow_up\": \"...\", \"requirements\": \"...\", \"candidates\": [...]}。不要包含任何额外文字、markdown 代码块或注释。"
+      
   tone: 专业、严谨，但不失亲和。

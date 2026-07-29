@@ -1,3 +1,9 @@
+import json
+
+import tiktoken
+
+enc = tiktoken.get_encoding("cl100k_base")
+
 """ token 预算 """
 class TokenBudget():
     def __init__(self, model_window:int = 128_000, budget_ratio: float = 0.8):
@@ -7,7 +13,9 @@ class TokenBudget():
 
     def count(self, messages: list[dict[str, str]]) -> int:
         """计算消息的 token 数量,  先按 4 个字符计算计算"""
-        return sum(int(len(message.get("content", "")) / 4) for message in messages)
+        # return sum(int(len(message.get("content", "")) / 4) for message in messages)
+        return len(enc.encode(json.dumps(messages, ensure_ascii=False)))
+        # return sum(len(enc.encode(message.get("content", ""))) for message in messages)
 
     def is_within_budget(self, messages: list[dict[str, str]], max_output: int = 0) -> tuple[bool, int, int]:
         """判断消息是否在预算内、当前用量、剩余额度"""

@@ -1,7 +1,8 @@
 SHELL := /bin/bash
-.PHONY: list render run clean
+.PHONY: test run-e2e
 
-# 跑完整测试（渲染 + 调用模型）
-run: 
-	cd ../w1-env && source .venv/bin/activate && cd ../w4-context && python src/test_tool.py
+test:
+	cd ../w1-env && source .venv/bin/activate && cd ../w4-tool-use && python -m pytest src/test_tool.py -v
 
+run-e2e:
+	cd ../w1-env && source .venv/bin/activate && cd ../w4-tool-use && python src/test_agent.py

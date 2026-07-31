@@ -7,15 +7,18 @@ W4 核心交付：手写 Agent Loop，不依赖任何框架。
 dispatch(action) → reducer 更新 state → 如果 action 触发 side effect → 执行 → dispatch 新 action。
 """
 
+import functools
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-# 路径补丁，复用 w1-env 的 RouterClient
+# 路径补丁，复用 w1-env 的 RouterClient 和 w5 的 RetryController
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "w1-env"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "w5-error-retry" / "src"))
 
 from src.llm.router import RouterClient
+from retry_controller import RetryController
 from tool_registry import ToolRegistry
 from tool_executor import ToolExecutor, format_error_for_llm
 
@@ -70,6 +73,8 @@ class Agent:
         self.registry = ToolRegistry()
         self.registry.register_defaults()
         self.executor = ToolExecutor(self.registry)
+        # W5: RetryController 包裹工具执行，瞬时错误自动重试
+        self.retry = RetryController(max_retries=3)
 
     async def run(self, user_query: str) -> dict[str, Any]:
         """执行一轮 Agent 对话。
@@ -115,10 +120,14 @@ class Agent:
                     "tool_calls": tool_call_log,
                 }
 
-            # 4. 如果 LLM 调工具 → 执行 → 结果追加到 messages
+            # 4. 如果 LLM 调工具 → 重试包裹 → 执行 → 结果追加到 messages
             if action["action"] == "use_tool":
-                result = await self.executor.execute(
-                    action["tool"], action["arguments"]
+                # W5: 用 RetryController 包裹 executor，瞬时错误自动退避重试
+                exec_fn = functools.partial(
+                    self.executor.execute, action["tool"]
+                )
+                result = await self.retry.try_with_retry(
+                    exec_fn, arguments=action["arguments"]
                 )
                 tool_call_log.append(
                     {

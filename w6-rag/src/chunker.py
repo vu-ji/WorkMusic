@@ -12,10 +12,9 @@ W6 核心实验对象。RAG 的第一步：把长文档切成小块，每块单�
 - 固定切分 = 每 1000 字符一刀切（可能切断句子）
 - 段落切分 = 按空行分段（保留完整段落，但长短不一）
 - 滑动窗口 = 卡片之间留 10% 重叠（检索到边界时上下文不丢）
-
-TODO: 完成下面的 TODO 标记项。
 """
 
+import re
 from typing import Any
 
 
@@ -39,19 +38,20 @@ def chunk_by_fixed_size(
     - 最后一块不足 chunk_size 也要保留
     - text 为空 → 返回 []
     """
-    # TODO: 实现固定长度 + 重叠切分
-    # 参考实现骨架：
-    # chunks = []
-    # start = 0
-    # while start < len(text):
-    #     end = min(start + chunk_size, len(text))
-    #     chunks.append(text[start:end])
-    #     if end == len(text):
-    #         break
-    #     start += chunk_size - overlap
-    # return chunks
-    pass
-
+    if not text:
+        return []
+    if overlap >= chunk_size:
+        raise ValueError(f"overlap({overlap}) must be less than chunk_size({chunk_size})")
+    chunks: list[str] = []
+    start = 0
+    step = chunk_size - overlap
+    while start < len(text):
+        end = min(start + chunk_size, len(text))
+        chunks.append(text[start:end])
+        if end == len(text):
+            break
+        start += step
+    return chunks
 
 def chunk_by_paragraph(
     text: str,
@@ -71,8 +71,28 @@ def chunk_by_paragraph(
     - 某段太短 → 合并到前一段（避免孤立的碎片块）
     - 无段落（整个文本无空行）→ 退回固定切分
     """
-    # TODO: 实现段落切分 + 小块合并
-    pass
+    if not text.strip():
+        return []
+
+    paragraphs: list[str] = [p.strip() for p in text.split("\n\n") if p.strip()]
+
+    if not paragraphs:
+        return []
+    if len(paragraphs) == 1:
+        return chunk_by_fixed_size(text)
+    
+    chunks: list[str] = []
+    curr: str = ""
+    for para in paragraphs:
+        if curr and len(curr) >= min_chunk_size:
+            chunks.append(curr)
+            curr = para
+        else:
+            curr = f"{curr}\n\n{para}".strip() if curr else para
+
+    if curr:
+        chunks.append(curr)
+    return chunks
 
 
 def chunk_by_sentences(
@@ -93,8 +113,30 @@ def chunk_by_sentences(
     - 句子累积到 max_chunk_size 附近封顶
     - 单句超长（无标点）→ 按固定大小硬切
     """
-    # TODO: 实现句子切分
-    pass
+    if not text.strip():
+        return []
+    if len(text) <= max_chunk_size:
+        return [text]
+    sentences: list[str] = re.split(r"(?<=[。！？])", text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    chunks: list[str] = []
+    curr: str = ""
+    for s in sentences:
+        if len(s) > max_chunk_size:
+            if curr:
+                chunks.append(curr)
+                curr = ''
+            # 单句超长，按固定大小硬切
+            chunks.extend(chunk_by_fixed_size(s, max_chunk_size))
+            continue
+        if len(curr) + len(s) > max_chunk_size:
+            chunks.append(curr)
+            curr = s
+        else:
+            curr = f"{curr}{s}".strip() if curr else s
+    if curr:
+        chunks.append(curr)
+    return chunks
 
 
 def chunk_document(text: str, strategy: str = "paragraph") -> list[str]:
@@ -106,6 +148,14 @@ def chunk_document(text: str, strategy: str = "paragraph") -> list[str]:
 
     Returns:
         切分后的块列表
+
+    Raises:
+        ValueError: 未知策略（配置错误必须 fail-fast，不静默降级）
     """
-    # TODO: 策略分发
-    pass
+    if strategy == "fixed":
+        return chunk_by_fixed_size(text)
+    if strategy == "paragraph":
+        return chunk_by_paragraph(text)
+    if strategy == "sentence":
+        return chunk_by_sentences(text)
+    raise ValueError(f"unknown strategy: {strategy}")

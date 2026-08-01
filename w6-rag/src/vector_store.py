@@ -13,12 +13,15 @@ Chroma 概念对照（前端类比）：
     store.add(docs=["文本1"], metadatas=[{"id": "M001"}])
     results = store.query("电子摇滚 BPM 140", top_k=3)
 
-TODO: 完成下面的 TODO 标记项。
+注意：Chroma 1.5.9 的 query() 返回 dict（不是带属性的对象），
+且 ids/documents/metadatas/distances 都是双层嵌套（query_embeddings 是列表包列表）。
 """
 
 from typing import Any
 
-# TODO: import chromadb
+import chromadb
+from chromadb.api import ClientAPI
+from chromadb.api.models.Collection import Collection
 
 
 class VectorStore:
@@ -31,10 +34,8 @@ class VectorStore:
             path: Chroma 数据目录（PersistentClient 落盘位置）
             collection_name: 集合名
         """
-        # TODO:
-        # 1. self._client = chromadb.PersistentClient(path=path)
-        # 2. self._collection = self._client.get_or_create_collection(collection_name)
-        pass
+        self._client: ClientAPI = chromadb.PersistentClient(path=path)
+        self._collection: Collection = self._client.get_or_create_collection(collection_name)
 
     def add(
         self,
@@ -51,8 +52,14 @@ class VectorStore:
             metadatas: 附加信息（如来源、页码）
             ids: 自定义 id（缺省由 Chroma 自动生成）
         """
-        # TODO: self._collection.add(...)
-        pass
+        if ids is None:
+            ids = [f"doc_{i}" for i in range(len(documents))]  # Chroma 1.5.9 强制要求 ids
+        self._collection.add(
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids,
+        )
 
     def query(
         self,
@@ -69,16 +76,32 @@ class VectorStore:
             [{"id", "document", "metadata", "distance"}]
             distance 越小越相似（Chroma 用 L2 距离）
         """
-        # TODO: self._collection.query(query_embeddings=[...], n_results=top_k)
-        # 把返回结果整理成结构化列表
-        pass
+        result: dict = self._collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+        )
+
+        # result 是 dict，且值为双层嵌套（外层对应 query_embeddings 列表）
+        return [
+            {
+                "id": result["ids"][0][i],
+                "document": result["documents"][0][i],
+                "metadata": result["metadatas"][0][i],
+                "distance": result["distances"][0][i],
+            }
+            for i in range(top_k)
+        ]
 
     def count(self) -> int:
         """当前集合中的记录数。"""
-        # TODO: return self._collection.count()
-        pass
+        return self._collection.count()
 
     def delete_all(self) -> None:
-        """清空集合（重建索引时用）。"""
-        # TODO: self._collection.delete()
-        pass
+        """清空集合（重建索引时用）。
+
+        注意：Chroma 1.5.9 的 delete() 必须传 ids/where/where_document 至少一个。
+        清空策略：先取全部 ids 再删。
+        """
+        all_ids = self._collection.get()["ids"]  # get() 返回 {"ids": [...], ...}
+        if all_ids:
+            self._collection.delete(ids=all_ids)

@@ -13,13 +13,11 @@
     vec = await embedder.embed_text("一首适合健身房的电子摇滚")
     vecs = await embedder.embed_batch(["文本1", "文本2"])
 
-TODO: 完成下面的 TODO 标记项。
 """
 
 import asyncio
-from typing import Any
-
-# TODO: import httpx 或 openai 客户端
+import math
+import httpx
 
 
 class OllamaEmbedder:
@@ -32,8 +30,9 @@ class OllamaEmbedder:
             model: Ollama 中的 embedding 模型名，默认 bge-m3
             base_url: Ollama 服务地址
         """
-        # TODO: 保存参数，初始化 HTTP 客户端
-        pass
+        self.model: str = model
+        self.base_url: str = base_url
+        self.http:httpx.AsyncClient = httpx.AsyncClient(base_url=base_url)    
 
     async def embed_text(self, text: str) -> list[float]:
         """单条文本 → 向量。
@@ -44,10 +43,9 @@ class OllamaEmbedder:
         Returns:
             1024 维浮点向量（bge-m3）
         """
-        # TODO: POST {base_url}/api/embed
-        # body: {"model": self.model, "input": text}
-        # 返回: {"embeddings": [[...]]}
-        pass
+        result: httpx.Response = await self.http.post(url="/api/embed", json={"model": self.model, "input": text})
+        result.raise_for_status()
+        return result.json()["embeddings"][0]
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """批量文本 → 向量列表。
@@ -55,13 +53,13 @@ class OllamaEmbedder:
         Ollama 的 /api/embed 支持一次传多条，
         embedding 任务适合批量——比逐个调用省 N 次 HTTP 往返。
         """
-        # TODO: POST {base_url}/api/embed with input=texts
-        pass
+        result: httpx.Response = await self.http.post(url="/api/embed", json={"model": self.model, "input": texts})
+        result.raise_for_status()
+        return result.json()["embeddings"]
 
     def embed_text_sync(self, text: str) -> list[float]:
         """同步版本——测试或脚本里用 asyncio.run 不方便时调用。"""
-        # TODO: 用 asyncio.run(self.embed_text(text)) 包一层
-        pass
+        return asyncio.run(self.embed_text(text))
 
 
 def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
@@ -76,6 +74,12 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     Returns:
         相似度（越大越相似）
     """
-    # TODO: 实现余弦相似度
     # 公式：dot(a,b) / (|a| * |b|)
-    pass
+    if len(vec_a) != len(vec_b):
+        raise ValueError(f"向量维度不一致: {len(vec_a)} vs {len(vec_b)}")
+    dot = sum(x * y for x, y in zip(vec_a, vec_b))
+    norm_a:float = math.sqrt(sum(x * x for x in vec_a))
+    norm_b:float = math.sqrt(sum(y * y for y in vec_b))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)

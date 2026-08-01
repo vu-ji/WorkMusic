@@ -10,17 +10,14 @@ W6 核心交付。单一向量检索的问题：query 里的关键词可能没�
 - 向量检索 ≈ 全文模糊搜索（Elasticsearch match）
 - BM25 ≈ 精确词频搜索（term query）
 - 混合检索 ≈ 两者都跑一遍，结果用 RRF 融合
-
-TODO: 完成下面的 TODO 标记项。
 """
 
 import math
 import re
 from collections import Counter
 from typing import Any
-
-# TODO: from embedder import OllamaEmbedder
-# TODO: from vector_store import VectorStore
+from embedder import OllamaEmbedder
+from vector_store import VectorStore
 
 
 class BM25:
@@ -47,14 +44,24 @@ class BM25:
 
     def tokenize(self, text: str) -> list[str]:
         """分词：中文按字符、英文按单词。"""
-        # TODO: 中文提取（保留中文+英文单词）
-        # 简单方案：re.findall(r"[\u4e00-\u9fff]|[a-zA-Z]+", text.lower())
-        pass
+        return re.findall(r"[\u4e00-\u9fff]|[a-zA-Z]+", text.lower())
 
     def index(self, docs: list[str]) -> None:
         """建立索引。"""
-        # TODO: 对每篇 doc：分词 → 记录词频 → 统计 doc_freq
-        pass
+        self.docs = docs
+        self.doc_token_counts = []
+        self.doc_freq = Counter()
+
+        for doc in docs:
+            tokens: list[str] = self.tokenize(text=doc)
+            counts = Counter(tokens)
+            self.doc_token_counts.append(counts)
+            # 每篇文档的"去重词集合"合并进 doc_freq
+            # 注意：词在一篇文档里出现多次只计 1（df 是"多少篇文档含这个词"）
+            self.doc_freq.update(counts.keys())
+        
+        total_words = sum(sum(c.values()) for c in self.doc_token_counts)
+        self.avgdl = total_words / len(docs) if docs else 0.0
 
     def search(self, query: str, top_k: int = 3) -> list[dict[str, Any]]:
         """BM25 检索。
@@ -62,9 +69,32 @@ class BM25:
         Returns:
             [{"index": i, "score": float}]
         """
-        # TODO: 对每篇 doc 计算 BM25 分数，取 top_k
-        pass
+        if not self.docs:
+            return []
+        
+        query_tokens:list[str] = self.tokenize(query)
+        if not query_tokens:
+            return []
+        n: int = len(self.docs)
+        scores: list[float] = []
 
+        for i, counts in enumerate(self.doc_token_counts):
+            doc_len = sum(counts.values())
+            score = 0.0
+            for token in query_tokens:
+                tf = counts.get(token, 0)
+                if tf == 0:
+                    continue
+                df = self.doc_freq[token]
+                # IDF：词越稀有权重越高
+                idf = math.log(1 + (n - df + 0.5) / (df + 0.5))
+                # 词频饱和 + 长度归一化
+                denom = tf + self.k1 * (1 - self.b + self.b * doc_len / self.avgdl)
+                score += idf * tf * (self.k1 + 1) / denom
+            scores.append({"index": i, "score": score})
+
+        scores.sort(key=lambda x: x["score"], reverse=True)
+        return scores[:top_k]
 
 class HybridRetriever:
     """混合检索器：向量召回 + BM25 召回 → RRF 融合。"""
@@ -89,8 +119,8 @@ class HybridRetriever:
 
     def index_documents(self, docs: list[str]) -> None:
         """对全部文档建 BM25 索引（向量索引在 store.add 时建）。"""
-        # TODO: self.bm25.index(docs)
-        pass
+        self.docs = docs  # 保存引用，retrieve 时补充 document 原文
+        self.bm25.index(docs=docs)
 
     async def retrieve(
         self,
@@ -98,20 +128,36 @@ class HybridRetriever:
         top_k: int = 3,
         vector_weight: float = 0.5,
     ) -> list[dict[str, Any]]:
-        """混合检索。
+        """混合检索。"""
+        # 1. 向量召回
+        query_emb = await self.embedder.embed_text(query)
+        vector_hits = self.store.query(query_emb, top_k)
 
-        Args:
-            query: 查询文本
-            top_k: 最终返回条数
-            vector_weight: 向量召回占比（1 - vector_weight 给 BM25）
+        # 2. BM25 召回
+        bm25_hits = self.bm25.search(query, top_k)
 
-        Returns:
-            [{"id", "document", "metadata", "score"}]
-        """
-        # TODO:
-        # 1. query_emb = await self.embedder.embed_text(query)
-        # 2. vector_hits = self.store.query(query_emb, top_k)
-        # 3. bm25_hits = self.bm25.search(query, top_k)
-        # 4. RRF 融合：score = Σ 1/(rank + rrf_k)
-        # 5. 取融合分 top_k
-        pass
+        # 3. RRF 融合（rank 从 1 开始）
+        rrf_scores: dict[str, float] = {}
+        for rank, hit in enumerate(vector_hits, start=1):
+            doc_id = hit["id"]
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (self.rrf_k + rank)
+        for rank, hit in enumerate(bm25_hits, start=1):
+            doc_id = f"doc_{hit['index']}"   # BM25 的 index → store 里的 doc_{i}
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0) + 1 / (self.rrf_k + rank)
+
+        # 4. 按融合分排序取 top_k
+        ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+
+        # 5. 补充 document/metadata（从向量命中和 self.docs 里拿）
+        results = []
+        vector_by_id = {h["id"]: h for h in vector_hits}
+        for doc_id, score in ranked:
+            idx = int(doc_id.split("_")[1])
+            results.append({
+                "id": doc_id,
+                "document": self.docs[idx],
+                "metadata": vector_by_id.get(doc_id, {}).get("metadata"),
+                "score": score,
+            })
+        return results
+

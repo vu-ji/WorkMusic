@@ -24,7 +24,8 @@ ollama pull bge-m3             # 本地已有（1.2GB embedding 模型）
 ## 跑
 
 ```bash
-make test          # 15 条全绿（含真实 bge-m3 混合检索）
+make test          # 20 条全绿（含真实 bge-m3 混合检索 + LLM 重排）
+python src/test_rag_e2e.py   # 完整管线 e2e（检索→重排对比，需 ollama）
 ```
 
 ## 管线
@@ -42,6 +43,8 @@ make test          # 15 条全绿（含真实 bge-m3 混合检索）
 | 语义相似度 | 同类 0.606 vs 跨类 0.438（排序正确）|
 | BM25 稀有词 | IDF 生效，健身房 排第一 |
 | RRF 融合 | 双命中（向量+BM25）压过单边词频极高命中 |
+| LLM 重排 | 7b 打分可解释（"符合动感电子摇滚需求"），噪声候选压到 0-2 分 |
+| 重排稳定性 | 3 个 query top1 全部稳定（检索质量高时重排不改判，只拉开分数）|
 
 ## Chroma 1.5.9 踩坑（已修）
 

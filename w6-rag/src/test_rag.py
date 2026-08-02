@@ -155,3 +155,51 @@ class TestHybridRetriever:
         results = await retriever.retrieve("适合健身房的电子摇滚", top_k=3)
         # doc_0 在向量和 BM25 都出现 → RRF 融合分应最高
         assert results[0]["id"] == "doc_0"
+
+
+class TestLLMReranker:
+    """LLM 重排序测试（需要 ollama 运行中）"""
+
+    def test_parse_score_plain_json(self):
+        """纯 JSON 解析"""
+        from reranker import LLMReranker
+        r = LLMReranker()
+        assert r._parse_score('{"score": 8, "reason": "匹配"}') == {"score": 8.0, "reason": "匹配"}
+
+    def test_parse_score_markdown(self):
+        """markdown 代码块解析"""
+        from reranker import LLMReranker
+        r = LLMReranker()
+        parsed = r._parse_score('```json\n{"score": 7, "reason": "ok"}\n```')
+        assert parsed["score"] == 7.0
+
+    def test_parse_score_normalization(self):
+        """分数归一化：0-1 → 0-10，>10 → /10"""
+        from reranker import LLMReranker
+        r = LLMReranker()
+        assert r._parse_score('{"score": 0.6}')["score"] == 6.0
+        assert r._parse_score('{"score": 85}')["score"] == 8.5
+
+    def test_parse_score_invalid(self):
+        """非法格式 → None"""
+        from reranker import LLMReranker
+        r = LLMReranker()
+        assert r._parse_score("不是 JSON") is None
+        assert r._parse_score('{"score": "abc"}') is None
+
+    @pytest.mark.asyncio
+    async def test_rerank_reorders_candidates(self):
+        """候选被 LLM 重排：不匹配的排在后面"""
+        from reranker import LLMReranker
+        reranker = LLMReranker(tier="light")
+        candidates = [
+            {"id": "doc_0", "document": "一首适合健身房的电子摇滚 BPM 140 动感节奏", "metadata": None, "score": 0.5},
+            {"id": "doc_1", "document": "古典钢琴曲 安静优雅 适合睡前听", "metadata": None, "score": 0.4},
+            {"id": "doc_2", "document": "流行歌 旋律优美 适合逛街", "metadata": None, "score": 0.3},
+        ]
+        results = await reranker.rerank("给健身房找动感的电子摇滚", candidates)
+        assert len(results) == 3
+        assert results[0]["id"] == "doc_0"  # 最匹配的排第一
+        assert "rerank_score" in results[0]
+        assert "rerank_reason" in results[0]
+        assert results[0]["rerank_score"] >= results[1]["rerank_score"]

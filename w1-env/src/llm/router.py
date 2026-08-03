@@ -30,7 +30,7 @@ from token_budget import TokenBudget
 
 ROUTER_CONFIG = {
     "light":  ("qwen2.5:7b"),
-    "middle": ("deepseek-r1:8b"),   # 新增
+    "middle": ("qwen2.5:14b"),      # 默认：比 7b 指令遵循好，无 R1 的 CoT 干扰
     "heavy":  ("deepseek-r1:32b"),
     "cloud": ("deepseek-v4-flash"),
 }

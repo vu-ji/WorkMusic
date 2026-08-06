@@ -1,8 +1,13 @@
 import json
 
-import tiktoken
+# tiktoken 词表需要联网下载（openai blob）。local-first 环境可能失败，
+# 降级为字符估算（与 RouterClient 的 Ollama usage=0 fallback 同思路）。
+try:
+    import tiktoken
 
-enc = tiktoken.get_encoding("cl100k_base")
+    _enc = tiktoken.get_encoding("cl100k_base")
+except Exception:
+    _enc = None
 
 """ token 预算 """
 class TokenBudget():
@@ -12,10 +17,13 @@ class TokenBudget():
         self.budget: int = int(self.model_window * self.budget_ratio)
 
     def count(self, messages: list[dict[str, str]]) -> int:
-        """计算消息的 token 数量,  先按 4 个字符计算计算"""
-        # return sum(int(len(message.get("content", "")) / 4) for message in messages)
-        return len(enc.encode(json.dumps(messages, ensure_ascii=False)))
-        # return sum(len(enc.encode(message.get("content", ""))) for message in messages)
+        """计算消息的 token 数量。
+
+        tiktoken 可用时精确计数；词表下载失败时降级为 4 字符 ≈ 1 token 估算。
+        """
+        if _enc is not None:
+            return len(_enc.encode(json.dumps(messages, ensure_ascii=False)))
+        return sum(int(len(m.get("content", "")) / 4) for m in messages)
 
     def is_within_budget(self, messages: list[dict[str, str]], max_output: int = 0) -> tuple[bool, int, int]:
         """判断消息是否在预算内、当前用量、剩余额度"""

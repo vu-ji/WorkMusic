@@ -1,0 +1,22 @@
+# WorkMusic backend · 依赖清单
+# 安装：pip install -r requirements.txt  （建议 venv）
+
+# Web 框架
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart
+
+# LLM / 数据
+openai>=1.50            # OpenAI 兼容协议（DeepSeek/通义/Ollama）
+psycopg[binary]>=3.2    # PostgreSQL 驱动（pgvector 由 SQL 扩展加载）
+redis>=5.0
+pydantic>=2.9
+pydantic-settings
+
+# 数据处理
+PyPDF2>=3.0             # 合同 PDF 解析（M5 起用）
+
+# 测试
+pytest>=8.0
+pytest-asyncio
+httpx                    # FastAPI TestClient 依赖

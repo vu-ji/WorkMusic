@@ -16,7 +16,27 @@ wheels/
 # IDE-related files
 .DS_Store
 
-# 
-node_modules
+# Node
+node_modules/
+dist/
+*.local
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Env & secrets
+.env
+.env.local
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Pi harness runtime
+.pi/sessions/
 
 dify-src

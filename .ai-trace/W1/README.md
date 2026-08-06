@@ -1,6 +1,6 @@
 # W1 ai-trace
 
-> 记录 AI 生成代码 → 人工 Review → 修改后的痕迹。面试证据链：对应 「带代码 30 分钟 review 最棘手的 Agent 工程问题」。
+> 记录 AI 生成代码 → 人工 Review → 修改后的痕迹。面试证据链：对应「带代码 30 分钟 review 最棘手的 Agent 工程问题」。
 
 ## RouterClient · 模型路由客户端
 

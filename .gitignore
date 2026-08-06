@@ -39,4 +39,7 @@ __pycache__/
 # Pi harness runtime
 .pi/sessions/
 
+# 数据文件（版权歌词 + 数据库，不提交）
+backend/data/
+
 dify-src

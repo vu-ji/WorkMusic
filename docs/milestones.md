@@ -10,12 +10,12 @@
 
 > 详细工作流见 skill：`.pi/skills/lyrics-pipeline/SKILL.md`
 
-- [ ] **T-101 数据下载与清洗**：ChineseLyrics 下载入库（去重/空值/异常），有效歌曲 ≥ 9 万。产出 `backend/data/clean/lyrics_clean.jsonl` + `backend/data_pipeline/clean.py` + 最小测试
-- [ ] **T-102 LLM-as-tagger 打标管线**：top 2–5 万首打标（mood/scene/genre/language/bpm），JSON mode 批量请求 + 失败重试 + 程序兜底。抽检一致率 ≥ 85%。产出 `backend/data_pipeline/tag.py`
-- [ ] **T-103 合成业务字段**：license_type/price_tier/authorized_regions/status 程序生成，固定 seed 可复现。产出 `backend/data_pipeline/synthesize.py`
+- [x] **T-101 数据下载与清洗**：ChineseLyrics 下载入库（去重/空值/异常），有效歌曲 ≥ 9 万。产出 `backend/data/clean/lyrics_clean.jsonl` + `backend/data_pipeline/clean.py` + 最小测试（2026-08-06：100,504 首，9 测试全绿）
+- [x] **T-102 元数据回填管线**：真实歌词入库 SQLite（`import_db.py`，100,504 首）；bpm/mood/scene/genre 由 DeepSeek 基于歌词推断标注（`enrich_llm.py`，tag_source=llm，批 10 首 JSON 数组输出）；popularity 由网易云真实回填（`enrich_netease.py`，受风控限制慢速跑）。（2026-08-06：管线就绪，全量标注后台进行中）
+- [ ] **T-103 合成业务字段**：~~license/price 合成~~ **已取消（用户决策：不用 mock 数据）**。检索约束调整为真实字段（bpm/mood/scene/genre/language/popularity）
 - [ ] **T-104 合同模板（埋雷）**：5–8 份 PDF（单曲/批量/独家买断/公播/短视频），故意埋 10 个风险条款；埋雷清单存档为合同哨兵评估集。产出 `backend/data_pipeline/contract_templates/` + `docs/eval/contract-mines.md`
 
-**M1 验收**：pytest 全绿；`lyrics_clean.jsonl` ≥ 9 万条；打标 ≥ 2 万首且抽检一致率 ≥ 85%；合成字段全覆盖。
+**M1 验收**：pytest 全绿；`lyrics_clean.jsonl` ≥ 9 万条；SQLite 全量入库（✓ 100,504）；LLM 标注覆盖 ≥ 2 万首且抽检一致率 ≥ 85%；无合成字段。
 
 ---
 

@@ -19,7 +19,7 @@
 - **业务映射**：找歌 ≈ 曲库版权采买；审合同 ≈ 「智能合同处理」场景；结算 ≈ 「支付/结算系统」。
 - **职责映射**：一个项目打满 AI Agent 应用开发的核心职责（见第 12 节覆盖矩阵）。
 - **个人优势映射**：React 流式 UI + Citation 联动高亮 + 可视化面板 = 后端出身候选人做不出的前端降维打击。
-- **计划复用**：W6–W7 RAG 底座、W8 ReAct 组件、W5 MCP 曲库工具直接演化，不是从零开始。
+- **实现路线**：RAG 底座、ReAct 组件、MCP 曲库工具等核心机制在 W10 从零实现，吸收此前学习阶段验证过的设计思路。
 
 ## 3. Demo 剧本（3 分钟，面试现场版）
 
@@ -48,7 +48,7 @@ WorkMusic 工作台壳（React + Vite）
   └─ 右栏：工作区上下文可视化（搜索状态对象 / 已选清单 / 会话成本）
         │  统一 SSE/WebSocket 协议 + Agent 注册表（endpoint / capabilities / 会话路由）
         ▼
-Agent 服务层（Python FastAPI + 手写 Runtime，W8 复用）
+Agent 服务层（Python FastAPI + 手写 Runtime）
   ├─ 曲库雷达 Agent：search_catalog / get_track_detail / check_license / estimate_fee
   ├─ 合同哨兵 Agent：parse_contract / extract_clauses / flag_risks / cite_source
   ├─ 主 Agent（orchestrator，深度模式 P1）：按流程路由两个专家并聚合结果
@@ -65,7 +65,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 复用）
 
 **关键决策（可 challenge）**：
 - **向量库选 pgvector**：「BPM/价格结构化过滤 + 向量语义」在一个 SQL 里完成，混合检索最干净。备选 Qdrant。PG 同时兼业务库（工作区、观测数据），不引入第二个存储。
-- **Agent Runtime 手写**（复用 W8 成果），不套 LangGraph——面试话术：「runtime 是我自己写的，我清楚每一层为什么存在」。工作流编排展示用 LangGraph 画深度模式即可。
+- **Agent Runtime 手写**（从零实现），不套 LangGraph——面试话术：「runtime 是我自己写的，我清楚每一层为什么存在」。工作流编排展示用 LangGraph 画深度模式即可。
 - **后端 FastAPI**：Python 服务端技术栈，W1–W3 已用 Python 练手。
 - **Redis 一个实例两个用途**（v0.4 新增）：① Prompt/检索结果缓存（职责⑤「智能缓存：Prompt 缓存、向量缓存」，缓存层先抽象接口、Redis 可替换）② Redis Streams 作为 LLM-as-tagger 打标管线队列（5 万首异步打标，天然削峰）。**不单独上 RabbitMQ/Kafka**——单机规模下运维成本不划算，选型评估过程写进笔记（同时覆盖「Redis、消息队列」等基础能力要求）。
 - **Agents 列表树状化**（v0.4 新增）：主 Agent 为父节点、专家为子节点，表达 orchestrator→specialist 调度关系；绿灯在树上跳动 = 调度轨迹可视化。
@@ -99,7 +99,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 复用）
 
 **左侧导航：任务树 + 按需成员（v0.5 终稿）**：Agent 默认不显示——**@ 即拉入群**，被 @ 过的 Agent 才挂到对应任务下。任务按最近活跃排序，当前任务置顶。每个任务的子成员 = 该对话中调用过的 Agent 清单，当前对话者高亮 +「当前」badge。逻辑：新任务成员列表为空 → 首次 @曲库雷达 → 曲库雷达出现 → @合同哨兵 → 合同哨兵加入 → 即使话题结束，成员留存（历史成员可随时再 @）。
 
-**路由与上下文续接**：`@Agent` 设 `active_agent`，后续消息无需再 @ 默认发给它；话题切换时重新 @ 换人；主 Agent 在后台监听，**当消息与 active_agent 无关时自动接管**（轻量提示「话题切换 · 主 Agent 接管」）+ 提供回切建议。输入区顶部显示「当前发送给：XX · 切换」。——**一句话面试话术：「@谁谁干活，接着聊不用 @，话题跑偏主 Agent 兜底。」**实现上主 Agent 复用 W8 Runtime，路由 = `@mention 解析 → 设 active_agent → 意图兜底`，单 SSE。
+**路由与上下文续接**：`@Agent` 设 `active_agent`，后续消息无需再 @ 默认发给它；话题切换时重新 @ 换人；主 Agent 在后台监听，**当消息与 active_agent 无关时自动接管**（轻量提示「话题切换 · 主 Agent 接管」）+ 提供回切建议。输入区顶部显示「当前发送给：XX · 切换」。——**一句话面试话术：「@谁谁干活，接着聊不用 @，话题跑偏主 Agent 兜底。」**实现上主 Agent 复用 Runtime，路由 = `@mention 解析 → 设 active_agent → 意图兜底`，单 SSE。
 
 **工具清单（JSON Schema，示例）**：
 - `search_catalog(query, filters{bpm_min,bpm_max,genre,mood,language,license_tier,max_price}, top_k)`
@@ -113,7 +113,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 复用）
 
 ## 7. RAG 设计
 
-- **曲库侧**：10 万+ 真实中文歌词（ChineseLyrics，见第 8 节）+ LLM 打标 + 程序生成业务字段；索引 = 歌词片段 + 描述文本 embedding（BGE-M3 本地或通义 embedding API，W6 定）+ 结构化字段；检索 = 向量 top-k × 结构化过滤 → Rerank。
+- **曲库侧**：10 万+ 真实中文歌词（ChineseLyrics，见第 8 节）+ LLM 打标 + 程序生成业务字段；索引 = 歌词片段 + 描述文本 embedding（BGE-M3 本地或通义 embedding API）+ 结构化字段；检索 = 向量 top-k × 结构化过滤 → Rerank。
 - **合同侧**：PDF 解析（条款边界感知分块，防条款跨块断裂）→ 条款级 embedding；**Citation 定位到页 + 段落偏移**，前端双栏联动高亮。
 - **幻觉防线**：所有推荐/审查结论必须挂 Citation，无引用不输出；评估集专测「引用忠实度」。
 
@@ -192,7 +192,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 复用）
 | Multi-Agent 失控/超时 | 中 | 时间盒 2 天，做不完降级为架构图讲解 |
 | mock 数据太假被看穿 | 中 | 歌词片段 LLM 精修 2000 条；合同请 AI 起草后人工改两轮 |
 | 评估主观（配方/推荐好坏） | 中 | 以合同检出率（有标准答案）为硬指标，生成类用 judge 软指标 |
-| 工期挤压（只有 2 周） | 高 | W6–W9 产物必须可复用，W10 不返工底座 |
+| 工期挤压（只有 2 周） | 高 | 底座实现一次到位，W10 不返工 |
 
 ---
 

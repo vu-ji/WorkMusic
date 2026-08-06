@@ -7,7 +7,7 @@
 1. **先读后做**：每轮工作开始，先读 `AGENTS.md` 与 `docs/milestones.md`，确认当前任务（T-编号）再动手。禁止跳过上下文直接写代码。
 2. **任务执行循环**：每个任务按 `PLAN → IMPLEMENT → VERIFY → COMMIT` 四步走：
    - PLAN：写明「做什么 / 改哪些文件 / 怎么验收 / 风险」，不超过 10 行
-   - IMPLEMENT：动手写代码。**动手前必查 `docs/reuse-map.md`**，W1–W9 产物在 git `backup` 分支，能复用必须复用
+   - IMPLEMENT：动手写代码。**从零实现为主**；除非必要，不引入历史代码
    - VERIFY：跑测试（`cd backend && python -m pytest`），逐条核对验收标准
    - COMMIT：Conventional Commits，并在 `docs/milestones.md` 勾选完成
 3. **完成即汇报**：一个任务完成后，用 3–5 行汇报（做了什么 / 验收结果 / 下一步），再进入下一个任务。禁止一次性闷头做多个任务不汇报。

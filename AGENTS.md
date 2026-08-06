@@ -17,7 +17,7 @@
 
 - **当前里程碑**：M1 数据管线（W10 D1–2，计划 2026-08-08 完成）
 - **任务清单**：见 [`docs/milestones.md`](docs/milestones.md)（唯一事实来源，勾选即进度）
-- **可复用代码**：W1–W9 学习产物保存在 git `backup` 分支，动手前必查 [`docs/reuse-map.md`](docs/reuse-map.md)
+- **实现策略**：从零实现为主；除非必要，不依赖历史代码。
 
 ## 3. 架构总览（详见 docs/architecture.md）
 
@@ -27,7 +27,7 @@ WorkMusic 工作台壳（React + Vite）
   └─ 右栏：工作区上下文可视化（搜索状态对象 / 已选清单 / 会话成本）
         │  统一 SSE/WebSocket 协议 + Agent 注册表（endpoint / capabilities / 会话路由）
         ▼
-Agent 服务层（Python FastAPI + 手写 Runtime，W8 产物复用）
+Agent 服务层（Python FastAPI + 手写 Runtime）
   ├─ 曲库雷达 Agent：search_catalog / get_track_detail / check_license / estimate_fee
   ├─ 合同哨兵 Agent：parse_contract / extract_clauses / flag_risks / cite_source
   ├─ 主 Agent（orchestrator，深度模式 P1）：按流程路由两个专家并聚合结果
@@ -44,7 +44,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 产物复用）
 | # | 决策 | 原因 |
 |---|---|---|
 | 1 | 向量库用 **pgvector**（不换 Qdrant） | 结构化过滤 + 向量检索一个 SQL 完成；PG 兼业务库 |
-| 2 | **Agent Runtime 手写**（复用 W8），不套 LangGraph | 面试话术：「runtime 是我自己写的，我清楚每一层为什么存在」 |
+| 2 | **Agent Runtime 手写**（从零实现），不套 LangGraph | 面试话术：「runtime 是我自己写的，我清楚每一层为什么存在」 |
 | 3 | **专家团架构**：两个独立 Agent + blackboard 工作区 | prompt 各自聚焦、工具权限最小化、评估独立、新专家可插拔 |
 | 4 | mock 结算只做**一页报价单**，不做支付流 | 时间盒 1 天，最先砍 |
 | 5 | 数据底座 **ChineseLyrics** 10 万真实歌词 + LLM 打标 + 合成业务字段 | 真实感来源 + 数据工程亮点 |
@@ -56,7 +56,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 产物复用）
 - **Commit**：Conventional Commits（`feat|fix|refactor|docs|chore|test` + scope）
 - **文档**：模块级 README + `.env.example`（禁止提交真实密钥）
 - **注释/汇报**：中文；技术名词保留英文原文（context window、grounding、blackboard）
-- **复用优先**：动手前先查 `docs/reuse-map.md`；复用不等于糊里糊涂地用，要写清设计取舍
+- **实现策略**：从零实现为主，核心机制写清设计取舍；除非必要，不引入历史代码
 
 ## 6. 版权合规红线（面试红线，必须执行）
 
@@ -70,7 +70,7 @@ Agent 服务层（Python FastAPI + 手写 Runtime，W8 产物复用）
 1. **每轮工作开始**：读本文件 + `docs/milestones.md`，确认当前任务（T-编号）
 2. **任务执行循环**（模板见 `.pi/prompts/`）：
    - `PLAN` → 写清楚：做什么 / 改哪些文件 / 怎么验收 / 风险
-   - `IMPLEMENT` → 动手写代码（复用优先，查 reuse-map）
+   - `IMPLEMENT` → 动手写代码（从零实现为主）
    - `VERIFY` → 跑测试、自检验收标准
    - `COMMIT` → 遵守 commit 规范，更新 `docs/milestones.md` 勾选
 3. **一个任务完成后**：简短汇报（做了什么 / 验收结果 / 下一步），再进入下一个任务

@@ -16,7 +16,7 @@ backend/
     agents/            # 专家 Agent（curator 曲库雷达 / sentinel 合同哨兵 / orchestrator）
     rag/               # 检索（retriever/reranker/embedder）
     llm/               # LLM 抽象层（providers/router/budget）
-    tools/             # 工具注册与执行（复用 W4）
+    tools/             # 工具注册与执行
     workspace/         # blackboard 工作区上下文
     api/               # FastAPI 路由（SSE）
     observability/     # 观测（tokens/成本/延迟）

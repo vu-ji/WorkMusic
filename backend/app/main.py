@@ -2,7 +2,7 @@
 
 Milestone 规划（见 docs/milestones.md）：
 - M2 接入 RAG 检索
-- M3 接入 Agent Runtime（复用 W8 react.py）+ 工具层（复用 W4）
+- M3 接入 Agent Runtime + 工具层
 - M4 起提供 SSE 流式接口供前端调用
 
 本文件为最小可跑骨架，后续由 Agent 按 harness 规格填充。

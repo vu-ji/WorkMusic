@@ -10,14 +10,14 @@
 - **[AGENTS.md](AGENTS.md)** — 项目说明书，任何 LLM 进入仓库的第一入口
 - **[docs/milestones.md](docs/milestones.md)** — W10–W12 任务清单（唯一事实来源，勾选即进度）
 - **[docs/prd.md](docs/prd.md)** — 产品需求文档（v0.5 已拍板）
-- **[docs/reuse-map.md](docs/reuse-map.md)** — W1–W9 学习产物复用索引
+- **[docs/conventions.md](docs/conventions.md)** — 开发规范
 - **[.pi/](.pi/)** — Pi Coding Agent 的项目级 harness（工作法 + 任务模板 + 技能）
 
 **驱动方式**：在仓库根目录运行 `pi`，然后：
 
 ```
 /plan T-101        # 规划任务
-/implement T-101   # 实现任务（自动查复用地图 → 写代码 → 跑测试 → 勾选）
+/implement T-101   # 实现任务（从零实现 → 写代码 → 跑测试 → 勾选）
 /review            # 代码审查
 /commit            # 规范提交
 /retro M1          # 里程碑复盘
@@ -58,4 +58,4 @@ pgvector（向量 + 业务库）    Redis（缓存 + 打标队列）
 
 ## 学习项目背景
 
-本仓库是作者 12 周「前端 → Agent 开发」转型的毕业项目（W10–W12），W1–W9 学习产物保存在 git `backup` 分支（见 [docs/reuse-map.md](docs/reuse-map.md)）。
+本仓库是作者 12 周「前端 → Agent 开发」转型的毕业项目（W10–W12），从零实现。

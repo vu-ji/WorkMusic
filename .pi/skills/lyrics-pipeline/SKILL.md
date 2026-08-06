@@ -30,7 +30,7 @@ WorkMusic 曲库数据管线（M1，W10 D1–2）。目标：把 102,197 首真�
 - 只对 top 2–5 万首（按 popularity 预排序）
 - 取副歌截断（中段 2–4 行，控制 token）
 - 批量请求 DeepSeek，JSON mode 输出标签
-- 失败重试（复用 W5 RetryController 思路）+ 其余歌曲程序兜底（基于关键词词频表）
+- 失败重试（指数退避 + 最大重试次数）+ 其余歌曲程序兜底（基于关键词词频表）
 - 抽检：每 1000 首抽 10 首人工校验，记录一致率
 - 输出：`backend/data/tagged/lyrics_tagged.jsonl`
 
@@ -40,7 +40,7 @@ WorkMusic 曲库数据管线（M1，W10 D1–2）。目标：把 102,197 首真�
 
 ### 4. 入库（ingest.py）
 - pgvector：建表 + embedding（BGE-M3 或通义 API，见 docs/architecture.md）+ 向量索引
-- embedding 复用 W6 OllamaEmbedder 代码（git backup 分支 w6-rag/）
+- embedding 从零实现（BGE-M3 本地或通义 API）
 - 结构化字段进普通列，检索时 SQL 里同时过滤
 
 ## 版权合规（红线）

@@ -21,7 +21,7 @@
 
 ## M2 · RAG 底座（W10 D3–5，目标 2026-08-11）
 
-> 复用：W6-rag（backup 分支）的 chunker/embedder/vector_store/retriever；见 docs/reuse-map.md
+> 模块：chunker / embedder / vector_store / retriever（从零实现，每模块带最小测试）
 
 - [ ] **T-201 pgvector 建库建表**：PG 兼业务库（工作区/观测），`lyrics` 表含向量列 + 结构化字段列
 - [ ] **T-202 歌词入库**：embedding（BGE-M3 / 通义 API）+ 向量索引；歌词全文切片存储（对外仅取 ≤2 句）
@@ -34,7 +34,7 @@
 
 ## M3 · Agent Runtime 接入与工具（W10 D6–7，目标 2026-08-13）
 
-> 复用：W8-agent-arch（backup 分支）ReAct Runtime + W4 ToolExecutor；见 docs/reuse-map.md
+> 模块：LLM 抽象层 / ReAct Runtime / ToolExecutor（从零实现，见 docs/architecture.md）
 
 - [ ] **T-301 LLM 抽象层**：多厂商（DeepSeek/通义/Ollama）+ 负载均衡 + 故障转移 + 模型路由（意图分流：轻量/强模型）
 - [ ] **T-302 曲库雷达 Agent**：系统提示 + 工具集（search_catalog / get_track_detail / get_similar_tracks / check_license_status / estimate_license_fee / generate_license_draft）+ 搜索状态对象（结构化约束记忆，diff 更新）

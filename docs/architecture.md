@@ -32,17 +32,17 @@
 | 决策 | 理由 | 前端类比 |
 |---|---|---|
 | pgvector（不用 Qdrant/Chroma） | 结构化过滤+向量一个 SQL；PG 兼业务库 | 单库 = 单数据源，避免多存储同步 |
-| 手写 Runtime（不套 LangGraph） | 面试讲得清每一层；W8 产物直接演化 | 自己写事件循环 vs 用框架 |
+| 手写 Runtime（不套 LangGraph） | 面试讲得清每一层 | 自己写事件循环 vs 用框架 |
 | 专家团架构（独立 Agent + blackboard） | prompt 聚焦 / 权限最小 / 评估独立 / 可插拔 | 微前端 + 全局 store |
 | 搜索状态对象（结构化记忆） | 比通用文本压缩稳，约束 diff 更新 | 受控组件 vs 非受控 DOM |
 | Redis 一实例两用 | 缓存 + Streams 打标队列；单机不引 MQ | 一个进程内 shared state + 任务队列 |
 
-## 3. Agent 运行时（复用 W8 react.py）
+## 3. Agent 运行时（手写实现）
 
 ```
 循环：思考(LLM) → 工具调用(JSON Schema 校验) → 观察 → 再思考
   · 推理模式组件化：ReAct（默认）/ CoT / ToT
-  · 工具错误重试（复用 W5 RetryController）
+  · 工具错误重试（指数退避 + 最大重试次数）
   · 敏感工具（generate_license_draft）→ 用户确认 gate
   · 记忆：短期对话 + 长期偏好画像；曲库雷达用「搜索状态对象」diff 更新
 ```
